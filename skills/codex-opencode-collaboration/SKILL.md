@@ -1,11 +1,13 @@
 ---
 name: codex-opencode-collaboration
-description: Use when Codex needs to collaborate with OpenCode on coding work, review a diff with OpenCode, delegate a bounded task to OpenCode, rescue a stuck Codex task, or transfer a visible Codex thread into an OpenCode session.
+description: Use when Codex needs to collaborate with OpenCode on coding work, review a diff, delegate a bounded task, coordinate multiple OpenCode sessions, rescue a stuck task, or transfer a visible Codex thread into OpenCode.
 ---
 
 # Codex ↔ OpenCode Collaboration
 
 Use OpenCode as an independent second agent from inside Codex. Codex remains the owner of the workspace, tests, git state, and final judgment; OpenCode supplies implementation attempts, rescue analysis, review, adversarial review, or a continued session when a handoff is useful.
+
+Multiple OpenCode sessions can be treated as pseudo-subagents, but they are independent collaboration sessions, not managed subagents. Codex must orchestrate their roles, keep task packets narrow, and verify every accepted result.
 
 > Prerequisite: the `opencode-plugin-codex` Codex plugin is installed and exposes the `opencode_*` MCP tools. The current tool surface is `opencode_check`, `opencode_run`, `opencode_continue`, `opencode_rescue`, `opencode_review`, `opencode_adversarial_review`, `opencode_transfer`, `opencode_status`, `opencode_result`, and `opencode_cancel`.
 
@@ -38,6 +40,27 @@ Write a small, explicit packet before calling OpenCode:
 - Verification commands Codex will run afterward.
 - Expected output format: changed files, reasoning summary, test attempts, risks.
 
+#### Task Packet Width Budget
+
+Before `opencode_run`, reduce the packet until it fits:
+
+- File scope: prefer 1-5 files, or one tightly named directory.
+- Role scope: implementation, design review, copy review, risk review, or rescue diagnosis; do not combine them.
+- Behavior scope: one visible outcome, not "redesign, implement, test, and audit everything."
+- Time scope: if it may require broad repository discovery, Codex should explore first and pass OpenCode the narrowed context.
+
+Avoid prompts like:
+
+- "Fix everything."
+- "Redesign the page and update tests and check the whole site."
+- "Inspect the repo and decide what to do."
+
+If an OpenCode run times out while exploring, first assume the packet was too wide. Narrow scope before increasing timeout.
+
+#### Advisory-First Collaboration
+
+Use advisory sessions before implementation for strategic, visual, UX, copy, or architecture questions. Ask OpenCode to review and recommend only, then let Codex convert accepted advice into a bounded implementation packet.
+
 ### 2. Choose The Right OpenCode Entry
 
 | Need | Use | Notes |
@@ -51,7 +74,25 @@ Write a small, explicit packet before calling OpenCode:
 | Full handoff | `opencode_transfer` | Imports visible Codex user/assistant transcript into an OpenCode session. |
 | Background job management | `opencode_status`, `opencode_result`, `opencode_cancel` | Use `result` before summarizing OpenCode output. |
 
-### 3. Delegate Implementation Narrowly
+### 3. Coordinate Multiple OpenCode Sessions
+
+OpenCode sessions may be used as pseudo-subagents when the work benefits from independent perspectives. Give each session one role and a read-only default unless isolated implementation is explicitly needed.
+
+Recommended roles:
+
+- Design reviewer: visual hierarchy, layout, spacing, responsiveness, style fit.
+- Copy reviewer: audience fit, clarity, ambiguity, tone, repeated phrases.
+- Risk reviewer: hidden breakage paths, accessibility, state management, tests.
+- Implementation helper: one bounded code change in exact files.
+
+Single Writer Rule:
+
+- Do not let multiple OpenCode sessions mutate the same working tree at the same time.
+- Parallel OpenCode sessions should normally be review-only.
+- If multiple sessions must implement in parallel, isolate them in separate git worktrees and merge through Codex.
+- Codex is the final integrator and must read diffs before accepting changes.
+
+### 4. Delegate Implementation Narrowly
 
 Use `opencode_run` for a focused implementation task. Keep the prompt bounded:
 
@@ -64,7 +105,28 @@ Return changed files, verification attempted, remaining risks, and any assumptio
 
 After it returns, Codex must read the diff, verify against the plan, and run the real project checks before claiming progress.
 
-### 4. Review Before Completion
+### 5. Recover From Timeout Or Stalls
+
+When an OpenCode run times out or appears stuck:
+
+1. Read `opencode_result` before summarizing or retrying.
+2. Classify the stall: exploration too broad, implementation blocked, model/API failure, permission prompt, or long-running command.
+3. If exploration was too broad, cancel or abandon the run and resend a narrower packet with exact files and one role.
+4. If implementation partially changed files, inspect the diff before deciding whether to continue, revert your own changes, or take over.
+5. If model/API failed, check capability or provider state; do not retry the same prompt blindly.
+
+Timeout retry template:
+
+```text
+Previous run timed out during exploration. Retry with no broad repository search.
+Use only these files: <files>.
+Role: <implementation/design/copy/risk>.
+Goal: <one sentence>.
+Stop after this single change or review.
+Return changed files or findings, verification attempted, and remaining risks.
+```
+
+### 6. Review Before Completion
 
 For any non-trivial change:
 
@@ -75,6 +137,38 @@ For any non-trivial change:
 5. Patch only validated issues, re-run verification, and re-review if the patch changed behavior.
 
 Green tests are not enough for high-risk work; a second-agent review is a review gate, not a replacement for Codex ownership.
+
+## Prompt Templates
+
+Review only:
+
+```text
+Review only. Do not edit files.
+Scope: <files/directories>.
+Role: <design reviewer/copy reviewer/risk reviewer>.
+Return findings ordered by severity with exact file references and suggested fix direction.
+Ignore unrelated issues.
+```
+
+Narrow implementation:
+
+```text
+Implement only this bounded change.
+Scope: <exact files>.
+Do not commit, push, deploy, or modify unrelated files.
+Do not redesign adjacent areas.
+Return changed files, verification attempted, risks, and assumptions.
+```
+
+Pseudo-subagent packet:
+
+```text
+You are one advisory OpenCode session, not the final decision maker.
+Role: <design/copy/risk>.
+Scope: <files>.
+Do not edit files.
+Return only actionable findings and tradeoffs for Codex to verify.
+```
 
 ## Transfer Workflow
 
@@ -118,6 +212,11 @@ Then install `opencode-plugin-codex` from that marketplace in Codex and start a 
 ## Common Mistakes
 
 - Treating OpenCode output as authoritative without verifying real files.
+- Treating OpenCode as another full Codex instance and feeding it an oversized task packet.
+- Letting multiple OpenCode sessions write to the same working tree.
+- Increasing timeout after an exploration stall instead of narrowing the prompt.
+- Asking one session to handle product judgment, UI design, code implementation, tests, and copy review at once.
+- Starting multiple sessions without assigning distinct roles.
 - Calling transfer for a small review when `opencode_review` would be cheaper and safer.
 - Forgetting to retrieve background job results before reporting.
 - Assuming `opencode_setup` exists; current shipped tools use `opencode_check` for environment diagnostics.
