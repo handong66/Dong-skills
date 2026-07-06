@@ -72,7 +72,7 @@ Use advisory sessions before implementation for strategic, visual, UX, copy, or 
 | Normal diff review | `opencode_review` | Findings first; Codex verifies every finding before editing. |
 | High-risk review | `opencode_adversarial_review` | Use for hidden breakage paths, platform assumptions, and edge cases. |
 | Full handoff | `opencode_transfer` | Imports visible Codex user/assistant transcript into an OpenCode session. |
-| Background job management | `opencode_status`, `opencode_result`, `opencode_cancel` | Use `result` before summarizing OpenCode output. |
+| Background job management | `opencode_status`, `opencode_result`, `opencode_cancel` | Use `result` before summarizing OpenCode output; require `outputSummary.resultComplete === true` before treating it as final. |
 
 ### 3. Coordinate Multiple OpenCode Sessions
 
@@ -109,11 +109,12 @@ After it returns, Codex must read the diff, verify against the plan, and run the
 
 When an OpenCode run times out or appears stuck:
 
-1. Read `opencode_result` before summarizing or retrying.
+1. Read `opencode_result` before summarizing or retrying, and check `outputSummary` first.
 2. Classify the stall: exploration too broad, implementation blocked, model/API failure, permission prompt, or long-running command.
-3. If exploration was too broad, cancel or abandon the run and resend a narrower packet with exact files and one role.
-4. If implementation partially changed files, inspect the diff before deciding whether to continue, revert your own changes, or take over.
-5. If model/API failed, check capability or provider state; do not retry the same prompt blindly.
+3. If `outputSummary.state` is `queued_partial`, `running_partial`, `cancelled_partial`, `failed_partial`, or `succeeded_without_text`, treat stdout/stderr as partial process evidence, not an OpenCode result.
+4. If exploration was too broad, cancel or abandon the run and resend a narrower packet with exact files and one role.
+5. If implementation partially changed files, inspect the diff before deciding whether to continue, revert your own changes, or take over.
+6. If model/API failed, check capability or provider state; do not retry the same prompt blindly.
 
 Timeout retry template:
 
@@ -137,6 +138,15 @@ For any non-trivial change:
 5. Patch only validated issues, re-run verification, and re-review if the patch changed behavior.
 
 Green tests are not enough for high-risk work; a second-agent review is a review gate, not a replacement for Codex ownership.
+
+### 7. Handle Background Results Conservatively
+
+`opencode_result` can contain OpenCode JSONL tool logs even when no final answer exists. Check `outputSummary` before quoting or acting on OpenCode output:
+
+- `succeeded_with_text`: usable as OpenCode's final answer, after Codex verifies real files.
+- `queued_partial`, `running_partial`, `cancelled_partial`, `failed_partial`, `succeeded_without_text`: partial only. Do not describe it as an OpenCode review or implementation result.
+- If `sawSubagentTask` is true during a bounded review, treat the prompt as too broad unless the user explicitly approved OpenCode-native subagent work.
+- For repeated long-read/low-output runs, cancel and rerun with exact files/diffs plus findings-only output.
 
 ## Prompt Templates
 
@@ -194,6 +204,7 @@ After transfer:
 - Do not accept OpenCode's claims without reading files and running commands yourself.
 - Do not transfer hidden Codex context. Transfer is for visible user/assistant content only.
 - Do not confuse stale marketplace configuration with an installed plugin. If the tools are unavailable, say so and give the install/setup blocker.
+- Do not treat partial OpenCode stdout/stderr as a result. Cancelled, running, failed, or no-final-text background jobs are process evidence only; Codex must either rerun narrowly or verify any intermediate clue locally before using it.
 
 ## Install/Setup Fallback
 
@@ -219,5 +230,7 @@ Then install `opencode-plugin-codex` from that marketplace in Codex and start a 
 - Starting multiple sessions without assigning distinct roles.
 - Calling transfer for a small review when `opencode_review` would be cheaper and safer.
 - Forgetting to retrieve background job results before reporting.
+- Reporting cancelled/running tool logs as if OpenCode completed the review.
+- Sending broad documentation or repository-wide prompts through `opencode_run` when a bounded `opencode_review` target would force better convergence.
 - Assuming `opencode_setup` exists; current shipped tools use `opencode_check` for environment diagnostics.
 - Passing broad prompts like "fix everything" instead of a bounded work packet.
