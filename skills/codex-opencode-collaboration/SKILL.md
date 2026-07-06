@@ -205,6 +205,8 @@ After transfer:
 - Do not transfer hidden Codex context. Transfer is for visible user/assistant content only.
 - Do not confuse stale marketplace configuration with an installed plugin. If the tools are unavailable, say so and give the install/setup blocker.
 - Do not treat partial OpenCode stdout/stderr as a result. Cancelled, running, failed, or no-final-text background jobs are process evidence only; Codex must either rerun narrowly or verify any intermediate clue locally before using it.
+- Do not expose Codex security-scan skills inside OpenCode for ordinary collaboration. The plugin registration script skips `security-diff-scan`, `threat-model`, and `validation` by default; set `OPENCODE_REGISTER_SECURITY_SKILLS=1` only for explicitly scoped OpenCode security-scan workflows.
+- For transfer, pass an explicit authorized `model`; the plugin intentionally does not choose a provider/model default.
 
 ## Install/Setup Fallback
 
