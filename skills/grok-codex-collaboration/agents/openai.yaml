@@ -1,0 +1,4 @@
+interface:
+  display_name: "Grok Codex Collaboration"
+  short_description: "Coordinate Grok review, rescue, and jobs"
+  default_prompt: "Use $grok-codex-collaboration to coordinate Grok with explicit targets, safe prompts, and resultComplete-checked jobs."
