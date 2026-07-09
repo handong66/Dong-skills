@@ -3,7 +3,7 @@ name: grok-codex-collaboration
 description: "Use when Codex needs to collaborate with Grok through grok-plugin-codex: calling Grok CLI, delegating bounded repo work, requesting review/rescue/adversarial analysis, inspecting Grok sessions, exporting sessions, or managing Grok background jobs while Codex keeps scope, verification, git, and final judgment."
 ---
 
-# Codex <-> Grok Collaboration
+# Codex ↔ Grok Collaboration
 
 Use Grok as an independent second-agent surface from inside Codex. Codex remains the owner of the workspace, tests, git state, privacy boundary, and final decision; Grok supplies bounded implementation attempts, review, adversarial review, rescue analysis, or session evidence through the `grok-plugin-codex` MCP tools.
 

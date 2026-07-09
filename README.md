@@ -10,4 +10,4 @@ Personal collection of agent collaboration skills.
 
 ## Using a skill
 
-Drop a skill directory into a project's or your user-level skills location (for example `.claude/skills/<name>/SKILL.md` or the Codex skills directory), or wire this repo as a plugin marketplace. Each skill is self-contained in `skills/<name>/SKILL.md` with YAML frontmatter (`name`, `description`).
+Copy a skill directory into a project's or your user-level skills location — for example `.claude/skills/<name>/` or the Codex skills directory (`~/.codex/skills/<name>/`). Each skill is self-contained in `skills/<name>/SKILL.md` with YAML frontmatter (`name`, `description`).
