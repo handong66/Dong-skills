@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex ↔ OpenCode Collaboration"
+  short_description: "Orchestrate bounded OpenCode work from Codex"
+  default_prompt: "Use $codex-opencode-collaboration to run a bounded OpenCode second review and verify every finding in Codex."
