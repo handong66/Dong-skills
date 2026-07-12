@@ -7,7 +7,7 @@ description: Use when collaborating with the Codex CLI on a coding milestone —
 
 A division of labor between Claude Code and the Codex CLI on real coding work. **Codex writes the code; Claude designs, runs the tests Codex can't, critically reviews, and commits.** It is bidirectional: each side reviews the other until *both models + the test suite* agree. **Green tests ≠ Done** — a review round is mandatory.
 
-> Prerequisite: the `openai-codex` plugin is installed (provides the `codex:codex-rescue` agent and `codex-companion.mjs`). Codex must be authed (`/codex:setup`).
+> Prerequisite: the `openai-codex` plugin is installed (provides the `codex:codex-rescue` agent and `codex-companion.mjs` — for direct calls the script lives at `~/.claude/plugins/cache/openai-codex/codex/<version>/scripts/codex-companion.mjs`). Codex must be authed (`/codex:setup`).
 
 ## The Two Phases — design first, code second
 
@@ -47,8 +47,8 @@ Agent(
 ```
 
 - **Implementation** → just describe the task (the agent adds `--write`). **Review** → say "read-only review, no edits" so it omits `--write`.
-- Put routing flags (`--fresh`, `--resume`, `--model`) in the prompt text; the agent strips them.
-- **Do NOT** call `node codex-companion.mjs task --write --background` directly — that detaches from the harness (invisible in Background Tasks, no auto-notify, forces you to hand-roll status-poll watchers). That is the wrong path.
+- Put routing flags (`--fresh`, `--resume`) in the prompt text; the agent strips them and applies the routing. Do **not** rely on prompt text for `--model`/`--effort` — forwarding them is not guaranteed (see Operational gotchas).
+- **Do NOT** call `node codex-companion.mjs task --write --background` directly as the default path — that detaches from the harness (invisible in Background Tasks, no auto-notify, forces you to hand-roll status-poll watchers). The only exceptions are the two documented fallbacks in Operational gotchas (wrapper died mid-forward; `--model`/`--effort` must land).
 
 ## Red lines / rules that prevent disasters
 
@@ -64,11 +64,14 @@ Agent(
 - **`service_tier` must be `fast` or `flex`.** If something resets `~/.codex/config.toml` `service_tier = "default"`, Codex **dies at startup** with no useful error (3-line log, status `failed`). Symptom: a task "starts thread" then nothing. Fix: set it back to `fast` and re-check `codex-companion.mjs setup --json` shows `ready: true`. Then retry.
 - **Reading a background job's result:** `codex-companion.mjs result <job-id> --json` returns a terse `job.summary`; the **full review text is the final assistant message in the job log** (`~/.claude/plugins/data/codex-inline/state/<ws>/jobs/<job-id>.log`). (Using the Agent tool returns Codex's output directly, so you rarely need this.)
 - **Manage tasks** with `codex-companion.mjs status [job-id] --json` / `result <job-id>` / `cancel <job-id>`. (Slash commands: `/codex:status`, `/codex:result`, `/codex:cancel`, `/codex:review`, `/codex:adversarial-review`.)
+- **`--model` / `--effort` are not reliably forwarded by the `codex:codex-rescue` wrapper.** The wrapper's contract is to convert an explicit model/effort request into companion arguments, but it is an LLM forwarder — it can strip the flags from the prompt text **without** converting them, and the job then silently runs on the `~/.codex/config.toml` defaults. When a specific model matters, call the companion directly: `codex-companion.mjs task "<prompt>" --background --model <m> --effort <e>`, then **verify it took effect**. The companion does **not** persist model/effort (`status <job-id> --json` has no such fields) — read it back from the Codex session rollout instead: take the thread id from the job log's "Thread ready (<id>)" line, then check `session_meta` in `~/.codex/sessions/<Y>/<M>/<D>/rollout-*-<thread-id>.jsonl` (`model`/`effort`; `null` = config default — a dropped flag shows up as `model: null`). Never assume a flag landed without reading it back.
+- **The wrapper agent can die before submitting the job** (e.g. it hits the host Claude session limit mid-forward). Symptom: the wrapper reports failure or success-with-no-job, and `status --json` shows `running: []` with no new job id. That means nothing was submitted — don't wait; submit directly via the companion and poll yourself (a background loop over `status <job-id> --json` until `completed`/`failed`/`cancelled`, then `result <job-id>`).
+- **Upgrading the Codex CLI via npm does not fix a running session.** The companion uses a shared runtime (`app-server-broker.mjs serve` + a resident `codex app-server` child); after `npm i -g @openai/codex@latest` those processes still run the **old binary from memory**, so the original error reproduces byte-for-byte (e.g. "model X requires a newer version of Codex"). Fix: kill the broker and its app-server children (match `app-server-broker|<npm-prefix>.*codex` — carefully avoid ChatGPT.app's own Codex processes), let the next companion call respawn them, then smoke-test with `codex exec --sandbox read-only "Reply with exactly: OK"`.
 
 ## Anti-patterns (learned the hard way)
 
 - ❌ Claude implementing when Codex should (roles inverted).
-- ❌ Raw `codex-companion task --background` → invisible, needs hand-rolled watchers.
+- ❌ Raw `codex-companion task --background` as the default path → invisible, needs hand-rolled watchers. (It becomes the legitimate fallback when the wrapper can't be used — wrapper hit the host session limit, or the run needs `--model`/`--effort` forwarded; see Operational gotchas.)
 - ❌ Blindly applying a Codex-suggested fix without reading the code (phantom bugs).
 - ❌ Coding before the plan reached Claude↔Codex agreement.
 - ❌ Calling green tests "Done" without a review round.
