@@ -25,9 +25,9 @@ agy is not interchangeable with the other second agents. It has no read-only mod
 | One authorized, narrow code change | Bounded implementation | **Yes** — write-capable in the workspace; agy has no other mode |
 | Findings-first check of the working tree | Isolated review | No — a disposable copy, repository path never disclosed |
 | Hidden failure paths in a risk-sensitive target | Isolated adversarial review | No — same isolation; state the threat model when the user has given one |
+| A stuck task with evidence already gathered | Rescue diagnosis | **Yes** — deliberately not isolated, because a rescue needs the real tree |
 
 An adversarial review labels each finding against the threat model it was given. A finding outside that model is advisory: never a blocker, never a stop-work, never a reason to hold a merge. Where no threat model was stated, treat context-dependent findings the same way.
-| A stuck task with evidence already gathered | Rescue diagnosis | **Yes** — deliberately not isolated, because a rescue needs the real tree |
 
 Isolation belongs to the run, not to the conversation. Continuing a conversation is a write-capable run wherever it is pointed, so an isolated review is never resumed — if it runs out of budget, run a fresh isolated review with a narrower target.
 
