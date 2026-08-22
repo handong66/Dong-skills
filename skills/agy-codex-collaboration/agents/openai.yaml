@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex ↔ agy Collaboration"
+  short_description: "Orchestrate bounded Antigravity (agy) work from Codex"
+  default_prompt: "Use $agy-codex-collaboration to define one bounded agy work packet, choose its isolation, and verify its result in Codex."
