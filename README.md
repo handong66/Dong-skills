@@ -2,26 +2,16 @@
 
 Personal collection of agent collaboration skills.
 
-## Agent collaboration plugins
+## Working with other coding agents
 
-Use OpenCode, Grok, or Antigravity from Claude Code and Codex for scoped tasks, code review, troubleshooting, and session handoff.
+[Turnweft](https://github.com/handong66/turnweft) lets Claude Code and Codex hand work to Dim, Droid, Grok, OpenCode, and agy in the real project, with sessions you can come back to later.
 
-| Target CLI | From Claude Code | From Codex |
-| --- | --- | --- |
-| OpenCode | [opencode-plugin-cc](https://github.com/handong66/opencode-plugin-cc) | [opencode-plugin-codex](https://github.com/handong66/opencode-plugin-codex) |
-| Grok | [grok-plugin-cc](https://github.com/handong66/grok-plugin-cc) | [grok-plugin-codex](https://github.com/handong66/grok-plugin-codex) |
-| Antigravity (`agy`) | [agy-plugin-cc](https://github.com/handong66/agy-plugin-cc) | [agy-plugin-codex](https://github.com/handong66/agy-plugin-codex) |
-
-**Plugins connect the tools; skills organize the collaboration.** Dong-skills defines task scope, file ownership, cross-review, and acceptance checks. Its four named workflows cover Claude–Codex mutual review and Codex delegation to OpenCode, Grok, and Antigravity. The six plugins provide three auxiliary tools across two hosts; they are not six separate workflows. The Claude–Codex mutual-review workflow uses a separate third-party plugin.
-
-The Claude Code family traces back to OpenAI's Apache-2.0 [codex-plugin-cc](https://github.com/openai/codex-plugin-cc): the OpenCode port adapts its command surface, the Grok port applies the same approach, and the Antigravity port builds on the OpenCode port. The Codex family uses MCP servers and collaboration skills. The Antigravity plugins run reviews against disposable workspace copies; this separates review work from the source repository, but is not an OS-level sandbox. See each plugin's README and notices for its current behavior, installation, and attribution.
+**Turnweft connects the agents; these skills organize the collaboration.** Dong-skills defines task scope, file ownership, cross-review, and acceptance checks. Its two workflows cover Claude–Codex mutual review and delegation to other coding agents through Turnweft. The Claude–Codex workflow uses a separate third-party plugin.
 
 ## Skills
 
-- **[claude-codex-collaboration](skills/claude-codex-collaboration/SKILL.md)** — Claude–Codex mutual review with task-assigned roles, explicit writer handoffs, proportionate design gates, and runtime recovery. Either host can implement or verify when assigned and supported.
-- **[codex-opencode-collaboration](skills/codex-opencode-collaboration/SKILL.md)** — bounded OpenCode implementation, review, rescue, recoverable sessions, and privacy-safe visible-conversation transfer through the installed plugin.
-- **[grok-codex-collaboration](skills/grok-codex-collaboration/SKILL.md)** — bounded Grok work, evidence-backed review, same-session answer recovery, and explicit read-only session boundaries.
-- **[agy-codex-collaboration](skills/agy-codex-collaboration/SKILL.md)** — Antigravity collaboration with an explicit choice between disposable-copy reviews and write-capable implementation, rescue, or continuation.
+- **[claude-codex-collaboration](skills/claude-codex-collaboration/SKILL.md)** — Claude–Codex mutual review: assign roles for the task, hand off edits explicitly, check each other's work, and pick up an interrupted task. Either host can implement or verify when assigned.
+- **[turnweft-collaboration](skills/turnweft-collaboration/SKILL.md)** — hand bounded implementation, review, or diagnosis from Claude Code or Codex to Dim, Droid, Grok, OpenCode, or agy through Turnweft, continue the same agent session, and verify the result before accepting it.
 
 ## How collaboration works
 
@@ -29,9 +19,7 @@ The Claude Code family traces back to OpenAI's Apache-2.0 [codex-plugin-cc](http
 2. **Hand off writes.** Confirm the previous writer stopped, reconcile the diff, and pass on verified and unverified work before another agent edits. Parallel work needs authorization and independent scopes.
 3. **Close the review.** Verify each finding against source or behavior, track open and closed issues, and recheck repairs and affected behavior. Review budgets prevent repeated unchanged rounds; they never turn an unresolved blocker into approval.
 4. **Check the evidence.** Distinguish source inspection, static checks, runtime tests, and production observations. For generated or visual artifacts, pin the output and state which page, region, or view was actually inspected.
-5. **Recover and deliver.** Use the installed plugin's current completion and recovery contract. The integrator performs authorized Git/release actions and verifies the actual user entry point.
-
-These workflows capture reusable practices from local use. They do not publish private sessions, prescribe fixed model settings, or treat past host limitations as permanent rules. Tool schemas, failure-code tables, and runtime defaults stay with the plugins that implement them.
+5. **Pick up and deliver.** Continue an interrupted task through the tool that started it. The integrator handles authorized Git and release steps and checks what users actually see.
 
 ## Using and maintaining a skill
 

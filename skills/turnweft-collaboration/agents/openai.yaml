@@ -1,0 +1,4 @@
+interface:
+  display_name: "Turnweft Collaboration"
+  short_description: "Orchestrate bounded work with other coding agents through Turnweft"
+  default_prompt: "Use $turnweft-collaboration to define one bounded work packet for another coding agent through Turnweft and verify its result."

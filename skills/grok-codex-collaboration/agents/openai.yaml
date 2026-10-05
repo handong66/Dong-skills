@@ -1,4 +1,0 @@
-interface:
-  display_name: "Codex ↔ Grok Collaboration"
-  short_description: "Orchestrate bounded Grok work from Codex"
-  default_prompt: "Use $grok-codex-collaboration to define one bounded Grok work packet and verify its result in Codex."
